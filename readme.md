@@ -14,7 +14,7 @@ Welcome to the **TIF** repository! This package includes the source code and exa
 
 ## Overview
 
-The TIF algorithm is designed to enhance the spatial resolution of Landsat 8 imagery from 30 m to 10 m by leveraging the higher resolution Sentinel-2 data. This method can be used to generate fine-resolution dense time series, i.e. 10 m Harmonized Landsat and Sentinel-2 (HLS) data.
+The TIF algorithm is designed to enhance the spatial resolution of **Landsat 8-9 imagery** from 30 m to 10 m by leveraging the higher resolution **Sentinel-2** data. This method can be used to generate **fine-resolution dense time series**, i.e. 10 m Harmonized Landsat and Sentinel-2 (HLS) data.
 
 ## Features
 
