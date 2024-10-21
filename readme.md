@@ -1,6 +1,6 @@
 # TIF: Time-series-based Image Fusion
 
-Welcome to the **TIF** repository! This package includes the source code and examples of the **Time-series-based Image Fusion (TIF)** algorithm. The TIF algorithm was developed to produce 10 m Harmonized Landsat and Sentinel-2 (HLS) data by fusing 30 m Landsat 8 and 10 m Sentinel-2 time series.
+Welcome to the **TIF** repository! This package includes the source code and examples of the **Time-series-based Image Fusion (TIF)** algorithm. The TIF algorithm was developed to produce 10 m Harmonized Landsat and Sentinel-2 (HLS) data by fusing 30 m Landsat 8-9 and 10 m Sentinel-2 A/B time series.
 
 ## Table of Contents
 
