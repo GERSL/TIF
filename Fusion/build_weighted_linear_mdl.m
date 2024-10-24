@@ -19,6 +19,8 @@ function [TIF_par,cluster] = build_weighted_linear_mdl(X,Y,band_codes_L,method,v
     cluster = p.Results.cluster;
     d = p.Results.d;
     wfun = p.Results.wfun;
+
+    color_code = {'r','b','c','m'};
     
 
     %% Define weight functions
@@ -144,42 +146,37 @@ function [TIF_par,cluster] = build_weighted_linear_mdl(X,Y,band_codes_L,method,v
         end
         hold(ax1,'on')
 
-
-        if Band_plot >=4
-            % xlim([0 6200])
-            % ylim([0 6200])
-            % xticks([0,1000,2000,3000,4000,5000,6000]);
-        % yticks([0,1000,2000,3000,4000,5000,6000]);
-            % xlim([0 8200])
-            % ylim([0 8200])
-            % xticks([0,1000,2000,3000,4000,5000,6000,7000,8000]);
-            % yticks([0,1000,2000,3000,4000,5000,6000,7000,8000]);
-            % 
-            xlim([0 5200])
-            ylim([0 5200])
-            xticks([0,1000,2000,3000,4000,5000]);
-            yticks([0,1000,2000,3000,4000,5000]);
-
-            % xlim([0 2100])
-            % ylim([0 2100])
-            % xticks([0,500,1000,1500,2000]);
-            % yticks([0,500,1000,1500,2000]);
+        if Band_plot >=4  
+            if max(y)>5000 && max(y)<8000
+                xlim([0 6200])
+                ylim([0 6200])
+                xticks([0,1000,2000,3000,4000,5000,6000]);
+                yticks([0,1000,2000,3000,4000,5000,6000]);
+            
+            elseif  max(y)>8000
+                xlim([0 8200])
+                ylim([0 8200])
+                xticks([0,1000,2000,3000,4000,5000,6000,7000,8000]);
+                yticks([0,1000,2000,3000,4000,5000,6000,7000,8000]);
+            else
+                xlim([0 4200])
+                ylim([0 4200])
+                xticks([0,1000,2000,3000,4000]);
+                yticks([0,1000,2000,3000,4000]);
+            end
+          
         else
             xlim([0 3000])
             ylim([0 3000])
         end
-%             cb = colorbar();
-%             cb.Title.String = 'S10~L30 diff';
-%             set(cb,'position',[.5 .11 0.02 .2])
 
-        %% h1: 1:1 line
+%       h1: 1:1 line
         h1 = refline(1,0);  
         h1.Color = 'k';
         h1.DisplayName = '1:1 line';
         h1.LineWidth = 1.5;
         h1.LineStyle = "--";
-
-        %% h2: OLS linear model (we don't need this)
+        % h2: linear model
 %         if TIF_par(ik).QA
 %             lm = fitlm(x,y);
 %             h2 = refline(lm.Coefficients.Estimate(2),lm.Coefficients.Estimate(1));
@@ -189,7 +186,7 @@ function [TIF_par,cluster] = build_weighted_linear_mdl(X,Y,band_codes_L,method,v
 %         h2.Color = 	"#EDB120";
 %         h2.DisplayName = 'OLS';
 %         h2.LineWidth = 2;
-        %% h3: robustfit model fitting
+%         h3: robustfit model 
         if TIF_par(ik).QA
             mdl_rf = fitlm(x,y,'RobustOpts','on','Weights',weight);   % weighted robustfit model
             % mdl_rf
@@ -199,6 +196,7 @@ function [TIF_par,cluster] = build_weighted_linear_mdl(X,Y,band_codes_L,method,v
                     if k==1    
                         h3.Color = 'k';
                     else
+                        % h3.Color = 'g';
                         h3.Color = 	"#77AC30";
                     end
 %                 otherwise
@@ -220,26 +218,44 @@ function [TIF_par,cluster] = build_weighted_linear_mdl(X,Y,band_codes_L,method,v
             h3 = refline(0,0);
         end
         h3.DisplayName = 'robustfit';
+        % h3.Color = 	"#77AC30";
         h3.LineWidth = 2;
-       %% h4: Centroid of clusters
-        h4 = plot(C(ik,Band_plot),C(ik,Band_plot+6),'kx','MarkerSize',15,'LineWidth',3); 
-        h4.DisplayName = 'centroids';
+%       h4: Centroid of clusters
+        if k==1
+            h4 = plot(C(ik,Band_plot),C(ik,Band_plot+6),'x','MarkerSize',15,'LineWidth',3,'Color','k'); 
+            h4.DisplayName = 'Centroids.Cluster 1';
+        else
+            switch ik
+                case 1
+                    h4_1 = plot(C(ik,Band_plot),C(ik,Band_plot+6),'x','MarkerSize',15,'LineWidth',3,'Color',color_code{ik}); 
+                    h4_1.DisplayName = 'Centroids.Cluster 1';
+                case 2
+                    h4_2 = plot(C(ik,Band_plot),C(ik,Band_plot+6),'x','MarkerSize',15,'LineWidth',3,'Color',color_code{ik}); 
+                    h4_2.DisplayName = 'Centroids.Cluester 2';
+            end
+
+        end
+        
 
         if Band_plot >=4
-            % xlim([0 8200])
-            % ylim([0 8200])
-            % xticks([0,1000,2000,3000,4000,5000,6000,7000,8000]);
-            % yticks([0,1000,2000,3000,4000,5000,6000,7000,8000]);
-
-            xlim([0 5200])
-            ylim([0 5200])
-            xticks([0,1000,2000,3000,4000,5000]);
-            yticks([0,1000,2000,3000,4000,5000]);
-
-            % xlim([0 2100])
-            % ylim([0 2100])
-            % xticks([0,500,1000,1500,2000]);
-            % yticks([0,500,1000,1500,2000]);
+            if max(y)>5000 && max(y)<8000
+                xlim([0 6200])
+                ylim([0 6200])
+                xticks([0,1000,2000,3000,4000,5000,6000]);
+                yticks([0,1000,2000,3000,4000,5000,6000]);
+            
+            elseif  max(y)>8000
+                xlim([0 8200])
+                ylim([0 8200])
+                xticks([0,1000,2000,3000,4000,5000,6000,7000,8000]);
+                yticks([0,1000,2000,3000,4000,5000,6000,7000,8000]);
+            else
+                xlim([0 4200])
+                ylim([0 4200])
+                xticks([0,1000,2000,3000,4000]);
+                yticks([0,1000,2000,3000,4000]);
+            end
+            
         else
             xlim([0 3000])
             ylim([0 3000])
@@ -249,29 +265,15 @@ function [TIF_par,cluster] = build_weighted_linear_mdl(X,Y,band_codes_L,method,v
         xlabel('L30','FontSize',14)
         ylabel('S10','FontSize',14)
         title(['row/col=',num2str(ir),'/',num2str(ic),', Band ',num2str(Band_plot)]);
-        if ik==1
-            % legend([h0_1,h4],'Location','southeast');
-            legend([h0_1,h3,h4],'Location','northwest');
-%             legend([h0_1,h1,h3,h4],'Location','bestoutside');
-%             legend([h0_1,h1,h2,h3,h4],'Location','bestoutside');
-        else
-            legend([h0_1,h0_2,h3,h4],'Location','northwest');
-            % legend([h0_1,h0_2,h4],'Location','southeast');
-%             legend([h0_1,h0_2,h1,h3,h4],'Location','bestoutside');
-%             legend([h0_1,h0_2,h1,h2,h3,h4],'Location','bestoutside');
+        if ik==1 && k==1
+            legend([h0_1,h4],'Location','northwest');
+        elseif ik==2 && k==2 
+            legend([h0_1,h0_2,h4_1,h4_2],'Location','northwest');
         end
-        fontname(gcf,"Lucida Bright")
+        fontname(gcf,"Serif");
 %         set(gcf, 'color', 'none');   
     end % end of dolot
     end % end of ik   
     
-
-    
 end    % end of build_linear_mdl 
 
-
-% function s = madsigma(r,p)
-%     %MADSIGMA    Compute sigma estimate using MAD of residuals from 0
-%     rs = sort(abs(r));
-%     s = median(rs(max(1,p):end)) / 0.6745;
-% end

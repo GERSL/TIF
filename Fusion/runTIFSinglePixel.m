@@ -81,7 +81,7 @@ do_plot = p.Results.do_plot;
 save_figure = p.Results.save_figure;
 
 %% Set paths and folders
-folderpath_output = fullfile('Examples/Results');
+folderpath_output = fullfile('Results');
 if ~isfolder(folderpath_output)
     mkdir(folderpath_output)
 end
@@ -89,7 +89,7 @@ end
 %% Constants:
 % band codes for Landsat and Sentinel-2 
 band_codes_L = [1,2,3,4,5,6];
-band_codes_S = [1,2,3,10,8,9];
+band_codes_S = [1,2,3,4,5,6];
 % time series range for developing the TIF model
 daterange =[datenum(2013,1,1), datenum(2021,12,31)];
 
@@ -100,12 +100,9 @@ metadata_L = L8_metadata.metadata;
 %% Access time series data
 sampleTS = data.data;
 
-%% Report log of TIF only for the first first task (optional)  ks: need update
-% if task == 1 && i_task == 1
-%     reportTIFLog(folderpath_output, ntasks, folderpath_ClbSamples,...
-%         analysis_scale, hide_date, regress_method, match_method, t_threshold, resampledL30, ...
-%         Rsquared_t, spatial_info,w);
-% end
+%% Report log of TIF 
+reportTIFLog(folderpath_output, ntasks, regress_method, wfun, t_threshold);
+
 
 %% read time series data
 tic
@@ -143,6 +140,7 @@ end
 
 %% Plot raw time series (optional)
 if do_plot
+    figure("Name","TIF development")
     % access georeference info
     R = metadata_S.GRIDobj.georef.SpatialRef;
     [pt_lon,pt_lat] = convertRowCol2LatLon(ir,ic,R);
@@ -158,6 +156,7 @@ for cross_validation = 1:N
     %% match clear observations, i.e. X-Y pairs
     % t_threshold matching
     [X,Y,d] = match_obs(clrx_L,clrx_S,clry_L,clry_S,band_codes_L,band_codes_S,t_threshold,[],'first');
+    [X1,Y1,~] = match_obs(clrx_L,clrx_S,clry_L,clry_S,band_codes_L,band_codes_S,1,[],'first');
 
     %% k-means of [X,Y]
     try
@@ -187,27 +186,79 @@ for cross_validation = 1:N
     TIF_coefficient_iN = build_weighted_linear_mdl(X,Y,band_codes_L,regress_method,'ir',ir,'ic',ic,'doplot',do_plot,'Band_plot',band_plot,'cluster',idx,'d',d,'wfun',wfun); 
     
     %% Compare Rsquareds of the regression results
+    bands = 1:6;
+    test_ind = find(~isnan(X1(:,4)));
     if length(TIF_coefficient_iN)>1 
-        Rsquared_mean = [];
-        for iTIF = 1:length(TIF_coefficient_iN)
-            Rsquared = TIF_coefficient_iN(iTIF).Rsquared;
-            Rsquared_mean = [Rsquared_mean,Rsquared];
-        end
-        Rsquared_mean = mean(Rsquared_mean,"omitnan");
-        if Rsquared_mean < mean(TIF_coefficient_k1.Rsquared)
-            TIF_coefficient_iN = TIF_coefficient_k1;
-            if msg
-                fprintf("    Use one-group regression since row/col %d/%d clustered regression's R2 is lower than one-group R2!\n",ir,ic);
+        RMSE = 0;
+        RMSE_k1 = 0;
+        Pred = zeros(length(test_ind),length(bands));
+        Pred_k1 = zeros(length(test_ind),length(bands));
+        Ref = zeros(length(test_ind),length(bands));
+        % obtain prediction values from TIF
+        for ii = 1:length(test_ind)
+            id = test_ind(ii);
+            prediction = predict_TIF_reflectance(X1(id,:), TIF_coefficient_iN, band_codes_L, false);
+            prediction_k1 = predict_TIF_reflectance(X1(id,:), TIF_coefficient_k1, band_codes_L, false);
+            reference = Y1(id,:);
+            [m,~] = size(prediction);
+            [n,~] = size(reference);
+            if m~=n
+                prediction = prediction';
             end
+            Pred(ii,:) = prediction(:,bands);
+            Pred_k1(ii,:) = prediction_k1(:,bands);
+            Ref(ii,:) = reference(:,bands);    
+        end
+        % calculate the RMSE for each spectral band
+        if ~anynan(Pred) 
+            RMSE = rmse(Pred,Ref,'omitmissing');
+            RMSE_k1 = rmse(Pred_k1,Ref,'omitmissing');
         else
-            if msg
-                fprintf('    Use clustered TIF coefficient!\r');
-            end
+            row_id_good = find(~isnan(Pred(:,1)));
+            RMSE = rmse(Pred(row_id_good,:),Ref(row_id_good,:),'omitmissing');
+            RMSE_k1 = rmse(Pred_k1(row_id_good,:),Ref(row_id_good,:),'omitmissing');
         end
+        % update TIF_par_iN if needed (*this is band specific)
+        nbands_combine = 0;
+        if size(RMSE,2)>1   % if there are more than one same-day obs (most cases)
+            for iband = 1:length(bands)
+                if RMSE_k1(bands(iband))<RMSE(bands(iband))
+                    nbands_combine = nbands_combine + 1;
+                    if msg
+                        fprintf('   Combining band %d...\n', bands(iband));
+                    end
+                    for k = 1:length(TIF_coefficient_iN)
+                        if TIF_coefficient_iN(k).QA>0
+                            TIF_coefficient_iN(k).Slopes(bands(iband)) = TIF_coefficient_k1.Slopes(bands(iband));
+                            TIF_coefficient_iN(k).Intercepts(bands(iband)) = TIF_coefficient_k1.Intercepts(bands(iband));
+                            TIF_coefficient_iN(k).Rsquared(bands(iband)) = TIF_coefficient_k1.Rsquared(bands(iband));
+                        end
+                    end   
+                end
+            end   % end of i = 1:length(bands)
+        else   % if there is only one same-day obs (rare cases), consider the RMSE from all bands 
+            if RMSE_k1 < RMSE
+                if msg
+                    fprintf('   Only one observation, combining all bands ...\n');
+                end
+                nbands_combine = 6;
+                TIF_coefficient = TIF_coefficient_k1;
+            else
+                TIF_coefficient = TIF_coefficient_iN;
+            end
+        end   % end of size(RMSE,2)
+    else
+        TIF_coefficient = TIF_coefficient_k1;
     end   % end if(TIF_coefficient_iN)>1
 
+    % After per-band combining, if all six spectral bands were combined, save as one parameter.
+    if length(TIF_coefficient_iN)>1 && nbands_combine==length(bands) 
+        TIF_coefficient = TIF_par_ic_k1;
+    else
+        TIF_coefficient = TIF_coefficient_iN;
+    end
+
     % add clrx_L to TIF_coefficient cluster.
-    TIF_coefficient = TIF_coefficient_iN;
     for i = 1:length(TIF_coefficient)
         TIF_coefficient(i).cluster = [clrx_L,TIF_coefficient(i).cluster];
     end
@@ -232,7 +283,7 @@ for cross_validation = 1:N
         if ~exist(folderpath_figures)
             mkdir(folderpath_figures);
         end
-        plotname = sprintf('TIFplot_%s_r%05dc%05d_Band%01d.png',tilename,ir,ic,band_plot);
+        plotname = sprintf('TIFplot_%s_Lat_%.4f_Lon%.4f_Band%01d.png',tilename,pt_lat,pt_lon,band_plot);
         exportgraphics(gcf, fullfile(folderpath_figures,string(plotname)),'Resolution',1000);
         fprintf('    Plot saved!\r');
     end

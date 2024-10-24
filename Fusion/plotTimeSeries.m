@@ -33,8 +33,8 @@ function plotTimeSeries(clrx_S10,clry_S10,clrx_L30,clry_L30,Band_plot,pt_lat,pt_
 
     % band codes for Landsat and Sentinel-2 
     band_codes_L = [1,2,3,4,5,6];
-    band_codes_S = [1,2,3,10,8,9];
-    daterange =[datenum(2013,1,1), datenum(2021,12,31)];
+    band_codes_S = [1,2,3,4,569];
+    daterange =[datenum(2013,1,1), datenum(2022,12,31)];
 
 
     if isempty(cluster)
