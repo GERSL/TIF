@@ -50,7 +50,7 @@ We have included several demos in the examples directory to demonstrate the usag
 addpath(genpath('path_to_TIF_functions')); 
 
 %% Load example data
-data = load('Examples/Data/T18TXM_r03007c09955.mat');
+data = load('Examples/Data/T18TXM_Lat_42.1566_Lon_-72.5847.mat');
 L8_metadata = load('Examples/Data/L8_metadata.mat');
 S2_metadata = load('Examples/Data/S2_metadata.mat');
 
